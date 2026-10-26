@@ -1,1 +1,1 @@
-Projektziel: Wir entwickeln einen Webclient gemeinsam weiter.
+Projektziel: Mit Git so umgehen, dass es kein Geheimnis mehr für Studierende entstheht.
