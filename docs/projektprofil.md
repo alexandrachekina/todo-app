@@ -1,1 +1,2 @@
-Projektziel: Wir entwickeln einen Webclient gemeinsam weiter.
+# Projektziel: 
+projektziel : Wir entwickeln einen Webclient gemeinsam weiter.
