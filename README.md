@@ -8,7 +8,8 @@ zurückgesetzt. Eine REST-API wird später ergänzt.
 * Rose Mary 
 ### Repository
 Clone-URL:git@git.thm.de:pi2-ws2627-do3e/todoapp-client.git
-* Mitglied2
+
+* Alexandra Chekina Tetinou
 
 ## Starten
 
