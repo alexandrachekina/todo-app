@@ -1,5 +1,7 @@
+
 type TodoPriority = "hoch" | "mittel" | "niedrig";
 type TodoStatus = "offen" | "erledigt" | "in Bearbeitung";
+
 
 interface Todo {
   id: string;
@@ -40,6 +42,21 @@ class TodoItem implements Todo {
 class TodoManager {
   private todos: Todo[] = [];
 
+  async loadTodos() {
+    const response = await fetch("http://localhost:8081/api/todos");
+    if (!response.ok) {
+      throw new Error("Fehler beim Laden der Todos");
+    }
+    const data = await response.json();
+
+    this.todos = data.map((todo: any) => ({
+      ...todo,
+      createdAt: new Date(todo.createdAt),
+      dueDate: todo.dueDate ? new Date(todo.dueDate) : undefined
+    }));
+  }
+
+
   add(title: string, description: string, priority: TodoPriority, dueDate?: Date): Todo {
     const todo = new TodoItem(title, description, priority, dueDate);
     this.todos.push(todo);
@@ -55,6 +72,7 @@ class TodoManager {
     return undefined;
   }
 
+
   update(id: string, title: string, description: string, priority: TodoPriority,
          status: TodoStatus, dueDate?: Date): void {
     const todo = this.find(id);
@@ -67,7 +85,7 @@ class TodoManager {
     }
   }
 
-  remove(id: string): void {
+ remove(id: string): void {
     for (let i = 0; i < this.todos.length; i++) {
       if (this.todos[i].id === id) {
         this.todos.splice(i, 1);
@@ -147,13 +165,54 @@ class TodoManager {
       checkbox.className = "todo-checkbox form-check-input m-0";
       checkbox.setAttribute("aria-label", `${todo.title} als erledigt markieren`);
       checkbox.checked = todo.status === "erledigt";
-      checkbox.addEventListener("change", () => {
+      /* checkbox.addEventListener("change", () => {
         this.setStatus(todo.id, checkbox.checked ? "erledigt" : "offen");
         this.render();
         // Auch den Tastaturfokus nach dem Ersetzen der Checkbox wiederherstellen.
         focusTodoButton(todo.id, ".todo-checkbox");
-      });
+      }); */
       row.appendChild(checkbox);
+
+
+
+      checkbox.addEventListener("change", async () => {
+        try {
+          const response = await fetch(
+              `http://localhost:8081/api/todos/${todo.id}`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  status: checkbox.checked ? "erledigt" : "offen"
+                })
+              }
+          );
+
+          if (!response.ok) {
+            throw new Error("Status konnte nicht aktualisiert werden");
+          }
+
+          // Aktuelle Daten vom Server laden
+          await this.loadTodos();
+
+          // Oberfläche aktualisieren
+          this.render();
+
+          // Fokus wiederherstellen
+          focusTodoButton(todo.id, ".todo-checkbox");
+
+        } catch (error) {
+          console.error("Fehler beim Aktualisieren:", error);
+
+          // Checkbox auf den vorherigen Zustand zurücksetzen
+          checkbox.checked = !checkbox.checked;
+        }
+      });
+
+
+
 
       const title = document.createElement("span");
       title.className = "todo-title fw-bold text-break";
@@ -210,12 +269,26 @@ class TodoManager {
       deleteButton.type = "button";
       deleteButton.className = "btn btn-outline-danger btn-sm";
       deleteButton.textContent = "Löschen";
-      deleteButton.addEventListener("click", () => {
+      /*deleteButton.addEventListener("click", () => {
         this.remove(todo.id);
         this.render();
         // Nach dem Löschen verschwindet der auslösende Button.
         newButton.focus();
+      });*/
+
+      deleteButton.addEventListener("click", async () => {
+        try {
+          await deleteTodo(todo.id);
+          await this.loadTodos();
+          this.render();
+          newButton.focus();
+        } catch (error) {
+          console.error("Fehler beim Löschen:", error);
+        }
       });
+
+
+
       actions.append(editButton, deleteButton);
       card.appendChild(actions);
 
@@ -300,7 +373,7 @@ cancelButton.addEventListener("click", () => dialog.close());
 // Gilt sowohl für Abbrechen als auch für Escape und erfolgreiches Speichern.
 dialog.addEventListener("close", resetForm);
 
-form.addEventListener("submit", (event) => {
+/*form.addEventListener("submit", (event) => {
   event.preventDefault();
   const title = titleInput.value.trim();
   const description = descriptionInput.value.trim();
@@ -331,16 +404,217 @@ form.addEventListener("submit", (event) => {
   } else {
     newButton.focus();
   }
+});*/
+
+
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const title = titleInput.value.trim();
+  const description = descriptionInput.value.trim();
+  const dueDateValue = dueDateInput.value;
+
+  const dueDate = dueDateValue || undefined;
+
+  const priority = priorityInput.value as TodoPriority;
+  const status = statusInput.value as TodoStatus;
+
+  if (!title || !description) {
+    errorMsg.textContent = "Bitte Titel und Beschreibung ausfüllen.";
+    errorMsg.classList.remove("d-none");
+    return;
+  }
+
+  try {
+    if (editingId !== undefined) {
+
+      // Bestehendes Todo aktualisieren (PUT)
+      const response = await fetch(
+          `http://localhost:8081/api/todos/${editingId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              title,
+              description,
+              priority,
+              status,
+              dueDate
+            })
+          }
+      );
+
+      if (!response.ok) {
+        throw new Error("Aktualisierung fehlgeschlagen");
+      }
+
+    } else {
+
+      // Neues Todo erstellen (POST)
+      await createTodos({
+        title,
+        description,
+        priority,
+
+        dueDate
+      });
+    }
+
+    // Daten erneut vom Server abrufen
+    await manager.loadTodos();
+
+    // Oberfläche aktualisieren
+    manager.render();
+
+    dialog.close();
+
+  } catch (error) {
+    console.error("Fehler beim Speichern:", error);
+
+    errorMsg.textContent = "Speichern fehlgeschlagen.";
+    errorMsg.classList.remove("d-none");
+  }
 });
+
+
+
 
 // Beispieldaten demonstrieren alle Statuswerte sowie ein Todo ohne Termin.
 const tomorrow = new Date();
 tomorrow.setHours(0, 0, 0, 0);
 tomorrow.setDate(tomorrow.getDate() + 1);
-manager.add("Hausübung vorbereiten", "Aufgabenstellung lesen und offene Fragen notieren.", "hoch", tomorrow);
-const exampleInProgress = manager.add("TypeScript wiederholen", "Interfaces, Klassen und DOM-Ereignisse anhand der Todo-App nachvollziehen.", "mittel");
-manager.setStatus(exampleInProgress.id, "in Bearbeitung");
-const exampleDone = manager.add("Projekt starten", "Abhängigkeiten installieren, TypeScript kompilieren und die Anwendung öffnen.", "niedrig");
-manager.setStatus(exampleDone.id, "erledigt");
+//manager.add("Hausübung vorbereiten", "Aufgabenstellung lesen und offene Fragen notieren.", "hoch", tomorrow);
+//const exampleInProgress = manager.add("TypeScript wiederholen", "Interfaces, Klassen und DOM-Ereignisse anhand der Todo-App nachvollziehen.", "mittel");
+//manager.setStatus(exampleInProgress.id, "in Bearbeitung");
+//const exampleDone = manager.add("Projekt starten", "Abhängigkeiten installieren, TypeScript kompilieren und die Anwendung öffnen.", "niedrig");
+//manager.setStatus(exampleDone.id, "erledigt");
 
-manager.render();
+
+
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await manager.loadTodos();
+  manager.render();
+});
+interface TodoInput{
+
+  title: string;
+  description: string;
+
+  priority: TodoPriority;
+
+  dueDate?: string;
+}
+
+async function createTodos(todo: TodoInput) {
+  try {
+    const response = await fetch("http://localhost:8081/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(todo)
+    });
+
+    if (!response.ok) {
+      throw new Error("Fehler beim Erstellen des Todos");
+    }
+
+    const createdTodo = await response.json();
+    console.log("Erstellt:", createdTodo);
+
+  } catch (error) {
+    console.error("Fehler:", error);
+  }
+}
+
+async function aktualisiereTodo(
+    id: string,
+    todoData: TodoInput
+): Promise<void> {
+  try {
+    const response = await fetch(
+        `http://localhost:8081/api/todos/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(todoData)
+        }
+    );
+
+    if (!response.ok) {
+      throw new Error("Fehler beim Aktualisieren des Todos");
+    }
+
+    console.log("Todo erfolgreich aktualisiert!");
+
+    await manager.loadTodos();
+    manager.render();
+
+  } catch (error) {
+    console.error("Fehler:", error);
+    throw error;
+  }
+}
+
+
+async function patchTodo(
+    id: string,
+    changes: Partial<TodoInput>
+): Promise<void> {
+  try {
+    const response = await fetch(
+        `http://localhost:8081/api/todos/${id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(changes)
+        }
+    );
+
+    if (!response.ok) {
+      throw new Error("Fehler beim PATCH");
+    }
+
+    console.log("Todo teilweise aktualisiert");
+
+    await manager.loadTodos();
+    manager.render();
+
+  } catch (error) {
+    console.error("Fehler:", error);
+    throw error;
+  }
+}
+
+
+async function deleteTodo(id: string): Promise<void> {
+
+  const response = await fetch(
+      "http://localhost:8081/api/todos/" + id,
+      {
+        method: "DELETE"
+      }
+  );
+
+  if (!response.ok) {
+    throw new Error("Fehler beim Löschen des Todos");
+  }
+
+  console.log("Todo erfolgreich gelöscht!");
+}
+
+async function init(){
+  await manager.loadTodos();
+
+// Oberfläche aktualisieren
+  manager.render();
+}
+
+init()
+

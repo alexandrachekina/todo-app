@@ -1,0 +1,210 @@
+### 1. TodoSammlung abrufen
+### Erwatete Statuscode: 200 ok
+GET http://localhost:8081/api/todos
+
+### 2. Ein gültiges Todo anlegen
+### Erwarteter Statuscode: 201 Created
+### Prüfen: ID und Location-Header
+
+POST http://localhost:8081/api/todos
+Content-Type: application/json
+
+{
+  "title": "shoppen",
+  "description": "Jacke kaufen",
+  "priority": "mittel",
+  "dueDate": "2026-11-15"
+}
+
+
+### 3.Das angelegte Todo über seine ID abrufen
+### Erwartete Statuscode:  200 OK.
+GET http://localhost:8081/api/todos/fd256dd4-447d-4ee9-acc0-583d88ff6f64
+
+### 4.1) To-do mit PUT bearbeiten
+### Todo löschen
+### Erwartete Statuscode: 204 No Content
+PUT http://localhost:8081/api/todos/f3f4089d-87c6-4564-b64d-52011e2d37fe
+Content-Type: application/json
+
+{
+  "title": "Deutsch lernen",
+  "description": "Wichtig , intensiv lernen ",
+  "priority": "hoch",
+  "status": "offen"
+}
+
+### 4.2) TodoSammlung abrufen um den PUT zu prüfen
+### Erwatete Statuscode: 200 ok
+GET http://localhost:8081/api/todos
+
+### 5.1)status mit patch ändern
+### Erwartete StatusCode
+PATCH http://localhost:8081/api/todos/f3f4089d-87c6-4564-b64d-52011e2d37fe
+Content-Type: application/json
+
+{
+    "status": "erledigt"
+}
+
+### 5.2) TodoSammlung abrufen um den PATCH zu prüfen
+### Erwatete Statuscode: 200 ok
+GET http://localhost:8081/api/todos
+
+### 6. zuvor gesetztes Fälligkeitsdatum durch Übertragen von null entfernen
+### Erwartete StatusCode 200 ok
+PATCH http://localhost:8081/api/todos/34e04eb1-2f1a-4444-8b29-12f490ea42a8
+Content-Type: application/json
+
+{
+  "dueDate": null
+}
+
+### 7. Das Todo löschen
+### Erwartete Statuscode : 204 No Content
+DELETE http://localhost:8081/api/todos/34e04eb1-2f1a-4444-8b29-12f490ea42a8
+
+### 7.2)  anschließender GETAufruf auf die gelöschte Ressource
+### Erwartete StatusCode : 404 Not Found
+GET http://localhost:8081/api/todos/34e04eb1-2f1a-4444-8b29-12f490ea42a8
+
+
+### 8.1 Nicht vorhandenes Todo mit GET abrufen
+### Erwarteter Statuscode: 404 Not Found
+
+GET http://localhost:8081/api/todos/00000000-0000-0000-0000-000000000000
+
+
+### 8.2 Nicht vorhandenes Todo mit PUT bearbeiten
+### Erwarteter Statuscode: 404 Not Found
+
+PUT http://localhost:8081/api/todos/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "title": "Test",
+  "description": "Testbeschreibung",
+  "priority": "hoch",
+  "status": "offen"
+}
+
+
+### 8.3 Nicht vorhandenes Todo mit PATCH bearbeiten
+### Erwarteter Statuscode: 404 Not Found
+
+PATCH http://localhost:8081/api/todos/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "status": "erledigt"
+}
+
+
+### 8.4 Nicht vorhandenes Todo löschen
+### Erwarteter Statuscode: 404 Not Found
+
+DELETE http://localhost:8081/api/todos/00000000-0000-0000-0000-000000000000
+
+
+### 9.1 Titel fehlt
+### Erwarteter Statuscode: 400 Bad Request
+
+POST http://localhost:8081/api/todos
+Content-Type: application/json
+
+{
+  "description": "Milch kaufen",
+  "priority": "mittel"
+}
+
+
+### 9.2 Ungültige Priorität
+### Erwarteter Statuscode: 400 Bad Request
+
+POST http://localhost:8081/api/todos
+Content-Type: application/json
+
+{
+  "title": "Einkaufen",
+  "description": "Milch kaufen",
+  "priority": "sehr hoch"
+}
+
+
+### 9.3 Leerer Titel
+### Erwarteter Statuscode: 400 Bad Request
+
+POST http://localhost:8081/api/todos
+Content-Type: application/json
+
+{
+  "title": "   ",
+  "description": "Milch kaufen",
+  "priority": "mittel"
+}
+
+
+### 9.4 Ungültiges Fälligkeitsdatum
+### Erwarteter Statuscode: 400 Bad Request
+
+POST http://localhost:8081/api/todos
+Content-Type: application/json
+
+{
+  "title": "Einkaufen",
+  "description": "Milch kaufen",
+  "priority": "mittel",
+  "dueDate": "kein-datum"
+}
+
+
+
+### 10.1 PUT mit ungültiger Priorität
+### Erwarteter Statuscode: 400 Bad Request
+
+PUT http://localhost:8081/api/todos/f3f4089d-87c6-4564-b64d-52011e2d37fe
+Content-Type: application/json
+
+{
+  "title": "Deutsch lernen",
+  "description": "Intensiv lernen",
+  "priority": "extrem",
+  "status": "offen"
+}
+
+
+### 10.2 PATCH mit ungültigem Status
+### Erwarteter Statuscode: 400 Bad Request
+
+PATCH http://localhost:8081/api/todos/f3f4089d-87c6-4564-b64d-52011e2d37fe
+Content-Type: application/json
+
+{
+  "status": "abgebrochen"
+}
+
+
+### 10.3 GET – Prüfen, ob der bisherige Zustand unverändert ist
+### Erwarteter Statuscode: 200 OK
+
+GET http://localhost:8081/api/todos/f3f4089d-87c6-4564-b64d-52011e2d37fe
+
+
+### 11. Fehlerhaftes JSON senden
+### Erwarteter Statuscode: 400 Bad Request
+
+POST http://localhost:8081/api/todos
+Content-Type: application/json
+
+{
+  "title": "Einkaufen",
+  "description": "Milch kaufen",
+  "priority": "mittel",
+}
+
+
+
+### 12. Unbekannten API-Pfad aufrufen
+### Erwarteter Statuscode: 404 Not Found
+
+GET http://localhost:8081/api/unbekannt
