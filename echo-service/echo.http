@@ -1,0 +1,17 @@
+### echo ohne Parameter, erwartet 400
+GET http://localhost:8888/echo
+
+### echo mit Parameter, erwartet 200 und "Echo: PI2"
+GET http://localhost:8888/echo?message=PI2
+
+### echoUser mit gültigem JSON, erwartet 200, id und email, kein Passwort
+POST http://localhost:8888/echoUser
+Content-Type: application/json
+
+{"email": "bob@gibts.net", "password": "demo"}
+
+### echoUser mit kaputtem JSON, erwartet 400
+POST http://localhost:8888/echoUser
+Content-Type: application/json
+
+{ nichts hier
